@@ -1,0 +1,37 @@
+name: auto-unzip
+on:
+  push:
+    paths:
+      - '**.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Unzip all zip files
+        run: |
+          shopt -s globstar nullglob
+          for z in **/*.zip; do
+            [ -f "$z" ] || continue
+            out="${z%.zip}"
+            mkdir -p "$out"
+            unzip -o -q "$z" -d "$out"
+            rm -f "$z"
+          done
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: auto-unzip [skip ci]"
+          git push
